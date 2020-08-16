@@ -4,7 +4,9 @@
 
 use rocket::http::RawStr;
 use rocket::request::FromRequest;
-use rocket::request::{Form, LenientForm};
+use rocket::request::{Form, LenientForm, FromFormValue};
+
+
 
 
 #[get("/")]
@@ -47,14 +49,30 @@ fn hello2(name: String, age: u8, cool: bool) -> String {
     }
 }
 
-// Multiple segments.  FromForm (can set default)
-// query parameters
+// Multiple segments.  FromForm trait(can set default)
+// dynamic query parameters implements FromFormValue
 // option or lenient form
 // note: option for user account
+// https://api.rocket.rs/v0.4/rocket/request/trait.FromFormValue.html#method.default
+// FromFormValue - custom validation for AdultAge
+struct AdultAge(usize);
+
+impl<'v> FromFormValue<'v> for AdultAge {
+    type Error = &'v RawStr;
+
+    fn from_form_value(form_value: &'v RawStr) -> Result<AdultAge, &'v RawStr> {
+        match form_value.parse::<usize>() {
+            Ok(age) if age >= 21 => Ok(AdultAge(age)),
+            _ => Err(form_value),
+        }
+    }
+}
+
 #[derive(FromForm)]
 struct User {
     name: String,
     account: Option<usize>,
+    age: Option<AdultAge>,
 }
 
 // echohttp://localhost:8000/item?name=mose&account=1000
@@ -62,13 +80,16 @@ struct User {
 fn item(user: Option<Form<User>>) -> String {
     if let Some(user) = user {
         if let Some(account) = user.account {
-            format!("Hello, {} year old named {}!", account, user.name)
+            format!("Hello, {} account of old named {}!", account, user.name)
+        } else if let Some(age) = &user.age {
+            format!("Hello, year old named {}!", user.name)
         } else {
             format!("Hello {}!", user.name)
         }
     } else {
         "We're gonna need a name, and only a name.".into()
     }
+    
 }
 #[get("/item?<id>&<user..>", rank=2)]
 fn item2(id: u8, user: LenientForm<User>) -> String{ 
@@ -78,6 +99,7 @@ fn item2(id: u8, user: LenientForm<User>) -> String{
 fn item(id: u8, user: Form<User>) -> String{ 
     format!("item id: {} user:",id)
 } */
+
 
 
 fn main() {
