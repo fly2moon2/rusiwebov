@@ -88,8 +88,7 @@ fn item(user: Option<Form<User>>) -> String {
         }
     } else {
         "We're gonna need a name, and only a name.".into()
-    }
-    
+    }  
 }
 #[get("/item?<id>&<user..>", rank=2)]
 fn item2(id: u8, user: LenientForm<User>) -> String{ 
