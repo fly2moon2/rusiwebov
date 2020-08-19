@@ -6,8 +6,21 @@ use rocket::http::RawStr;
 use rocket::request::FromRequest;
 use rocket::request::{Form, LenientForm, FromFormValue};
 
+use std::fmt;
+use std::fmt::{Display};
 
+#[derive(Debug)]
+struct StrongPassword<'r>(&'r str);
 
+#[derive(Debug)]
+struct BoomAge(u8);
+
+#[derive(FromForm)]
+struct UserLogin<'r> {
+    username: &'r RawStr,
+    password: Result<StrongPassword<'r>, &'static str>,
+    age: Result<BoomAge, &'static str>,
+}
 
 #[get("/")]
 fn index() -> &'static str {
@@ -55,6 +68,9 @@ fn hello2(name: String, age: u8, cool: bool) -> String {
 // note: option for user account
 // https://api.rocket.rs/v0.4/rocket/request/trait.FromFormValue.html#method.default
 // FromFormValue - custom validation for AdultAge
+// needs to derive Debug trait to enable display fmt
+// impl Display for AdultAge to customise the Display format
+#[derive(Debug)]
 struct AdultAge(usize);
 
 impl<'v> FromFormValue<'v> for AdultAge {
@@ -68,6 +84,12 @@ impl<'v> FromFormValue<'v> for AdultAge {
     }
 }
 
+impl Display for AdultAge {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+       write!(f, "Age: {}", self.0)
+    }
+ }
+
 #[derive(FromForm)]
 struct User {
     name: String,
@@ -75,16 +97,17 @@ struct User {
     age: Option<AdultAge>,
 }
 
-// echohttp://localhost:8000/item?name=mose&account=1000
+// http://localhost:8000/item?name=mose&account=1000
+// http://localhost:8000/item?name=mose&age=10
 #[get("/item?<user..>")]
 fn item(user: Option<Form<User>>) -> String {
     if let Some(user) = user {
         if let Some(account) = user.account {
             format!("Hello, {} account of old named {}!", account, user.name)
         } else if let Some(age) = &user.age {
-            format!("Hello, year old named {}!", user.name)
+            format!("Hello, year old named {} age {:?}, age display {}!", user.name, age, age)
         } else {
-            format!("Hello {}!", user.name)
+            format!("Hello {}! Your are no adult {:?}", user.name, user.age)
         }
     } else {
         "We're gonna need a name, and only a name.".into()
