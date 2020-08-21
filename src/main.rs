@@ -2,13 +2,19 @@
 
 #[macro_use] extern crate rocket;
 
+mod files;
+#[cfg(test)] mod tests;
+
 use rocket::http::RawStr;
+use rocket::Request;
 use rocket::request::FromRequest;
 use rocket::request::{Form, LenientForm, FromFormValue};
 use rocket::response::Redirect;
 
 use std::fmt;
 use std::fmt::{Display};
+
+use regex::Regex;
 
 #[derive(Debug)]
 struct StrongPassword<'r>(&'r str);
@@ -79,7 +85,9 @@ fn login(user: Form<UserLogin>) -> Result<Redirect, String> {
 
 #[get("/user/<username>")]
 fn user_page(username: &RawStr) -> String {
-    format!("This is {}'s page.", username)
+    let re = Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
+   // println!("Did our date match? {}", re.is_match("2014-01-01"));
+    format!("This is {}'s page. is re match:{}", username, re.is_match("2014-01-01"))
 }
 
 #[get("/logon")]
@@ -177,8 +185,12 @@ fn item(id: u8, user: Form<User>) -> String{
     format!("item id: {} user:",id)
 } */
 
-
+#[catch(404)]
+fn not_found(req: &Request) -> String {
+    format!("Sorry, '{}' is not a valid path.", req.uri())
+}
 
 fn main() {
+    rocket::ignite().register(catchers![not_found]);
     rocket::ignite().mount("/", routes![index, login, user_page, logon, logon_name, logon_userid, hello, hello2, item, item2]).launch();
 }
